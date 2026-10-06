@@ -83,7 +83,7 @@ function renderFolders(box, res, s, ta) {
     if (f.full != null) parts.push(`Full: ${fa(f.full)} فایل`);
     if (f.diff != null) parts.push(`Diff: ${fa(f.diff)} فایل`);
     const empty = (f.full || 0) + (f.diff || 0) === 0;
-    row.append(cb, el("span", "fname", f.name), el("small", empty ? "bad" : "muted", parts.join(" · ") + (empty ? " — خالی" : "")));
+    row.append(cb, el("span", "fname", f.name), el("small", empty ? "bad" : "muted", parts.join(" • ") + (empty ? " — خالی" : "")));
     box.append(row);
   });
 }
@@ -100,7 +100,7 @@ function serverCard(s) {
 
   const body = el("div", "card-body");
   const d = cfg.defaults;
-  const diffInput = input("text", s.diff_dir || "", (v) => { if (v.trim()) s.diff_dir = v; else delete s.diff_dir; }, { dir: "ltr", placeholder: "پیش‌فرض: " + (d.diff_dir || "—") });
+  const diffInput = input("text", s.diff_dir || "", (v) => { if (v.trim()) s.diff_dir = v; else delete s.diff_dir; }, { dir: "ltr", placeholder: (d.diff_dir || "—") + " (پیش‌فرض)" });
   diffInput.disabled = s.diff_dir === null;
 
   const noDiff = el("label", "check");
@@ -118,7 +118,7 @@ function serverCard(s) {
   grid.append(
     field("نام سرور", input("text", s.name, (v) => { s.name = v; title.textContent = v || "سرور جدید"; })),
     field("مسیر share بکاپ‌ها", input("text", s.path, (v) => { s.path = v; path.textContent = v; }, { dir: "ltr", placeholder: "\\\\server\\backup" }), "پوشه‌ای که داخلش FULLBK و DIFFBK قرار دارد"),
-    field("پوشه‌ی Full (اختیاری)", input("text", s.full_dir || "", (v) => { if (v.trim()) s.full_dir = v; else delete s.full_dir; }, { dir: "ltr", placeholder: "پیش‌فرض: " + d.full_dir })),
+    field("پوشه‌ی Full (اختیاری)", input("text", s.full_dir || "", (v) => { if (v.trim()) s.full_dir = v; else delete s.full_dir; }, { dir: "ltr", placeholder: d.full_dir + " (پیش‌فرض)" })),
     field("پوشه‌ی Diff (اختیاری)", diffInput),
     field("حداکثر عمر Full (ساعت)", input("number", s.full_max_age_hours ?? "", (v) => setNum(s, "full_max_age_hours", v, true), { min: 1, placeholder: "پیش‌فرض: " + d.full_max_age_hours })),
     field("حداکثر عمر Diff (ساعت)", input("number", s.diff_max_age_hours ?? "", (v) => setNum(s, "diff_max_age_hours", v, true), { min: 1, placeholder: "پیش‌فرض: " + d.diff_max_age_hours }))
@@ -206,3 +206,16 @@ window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault()
     renderServers();
   } catch (e) { toast(e.message, "err"); }
 })();
+
+// دکمه‌ی کپی نمونه‌ی auth (با fallback برای HTTP غیرلوکال)
+$("copyAuth").onclick = async () => {
+  const text = $("authSnippet").textContent;
+  try {
+    if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
+    else {
+      const t = el("textarea"); t.value = text; document.body.append(t); t.select();
+      document.execCommand("copy"); t.remove();
+    }
+    toast("کپی شد");
+  } catch (e) { toast("کپی نشد؛ متن را دستی انتخاب کنید", "err"); }
+};

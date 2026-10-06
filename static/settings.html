@@ -3,17 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>تنظیمات پایش بکاپ</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="topbar"><div class="wrap">
-    <span class="brand">پایش بکاپ</span>
+  <header class="topbar"><div class="wrap"><div class="navbar">
+    <a class="brand" href="/"><span class="logo"></span>پایش بکاپ</a>
     <nav class="nav">
       <a href="/">وضعیت</a>
       <a href="/settings" aria-current="page">تنظیمات</a>
     </nav>
-  </div></div>
+  </div></div></header>
 
   <div class="wrap settings">
     <h1 class="page-title">تنظیمات</h1>
@@ -25,7 +26,11 @@
       <details class="adv">
         <summary>پیشرفته (آدرس و پورت پنل)</summary>
         <div class="grid" id="advanced"></div>
-        <p class="hint">تغییر آدرس یا پورت بعد از راه‌اندازی مجدد برنامه اعمال می‌شود. برای قفل کردن پنل با نام کاربری و رمز، بخش <code dir="ltr">"auth": {"username": "...", "password": "..."}</code> را در config.json اضافه کنید.</p>
+        <p class="hint">تغییر آدرس یا پورت بعد از راه‌اندازی مجدد برنامه اعمال می‌شود. برای قفل کردن پنل با نام کاربری و رمز، این بخش را به config.json اضافه کنید:</p>
+        <div class="snip code" dir="ltr">
+          <code id="authSnippet">"auth": { "username": "admin", "password": "change-me" }</code>
+          <button type="button" class="copy" id="copyAuth">کپی</button>
+        </div>
       </details>
     </section>
 

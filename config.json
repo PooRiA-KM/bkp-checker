@@ -13,7 +13,19 @@
     "size_drop_warning_percent": 50,
     "exclude_dirs": []
   },
-  "servers": [],
+  "servers": [
+    {
+      "name": "HIS",
+      "path": "\\\\172.20.10.26\\e$",
+      "exclude_dirs": [
+        "master",
+        "model",
+        "msdb"
+      ],
+      "full_dir": "FULLBK",
+      "diff_dir": "DIFFBK"
+    }
+  ],
   "auth": {
     "username": "admin",
     "password": "1"

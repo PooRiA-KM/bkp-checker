@@ -1,6 +1,5 @@
 const LABEL = { ok: "سالم", warning: "هشدار", error: "مشکل" };
 const SEG = [["all", "همه"], ["error", "مشکل"], ["warning", "هشدار"], ["ok", "سالم"]];
-const DOTS = { error: "var(--err)", warning: "#e0a21a", ok: "var(--ok)" };
 
 let data = null;
 let filter = "all";
@@ -15,7 +14,7 @@ function backupCell(label, b, extra) {
   if (!b) { c.append(el("span", "muted", "ندارد")); return c; }
   if (b.t == null) { c.append(el("span", "bad", b.msg)); return c; }
   c.append(el("span", null, fmtDate(b.t)));
-  c.append(el("small", null, `${fmtAge(b.age_h)} · ${fmtSize(b.size)}${extra || ""}`));
+  c.append(el("small", null, `${fmtAge(b.age_h)} • ${fmtSize(b.size)}${extra || ""}`));
   if (b.msg) c.append(el("span", b.status === "warning" ? "warn" : "bad", b.msg));
   return c;
 }
@@ -35,13 +34,25 @@ function dbRow(server, db) {
   const s = el("summary", "row");
   s.append(el("div", "dbname", db.name));
   s.append(backupCell("Full", db.full));
-  const cnt = db.diff && db.diff.count_24h != null ? ` · ${fa(db.diff.count_24h)} فایل در ۲۴ ساعت` : "";
+  const cnt = db.diff && db.diff.count_24h != null ? ` • ${fa(db.diff.count_24h)} فایل در ۲۴ ساعت` : "";
   s.append(backupCell("Diff", db.diff, cnt));
   s.append(el("span", "chip " + db.status, LABEL[db.status]));
   d.append(s);
 
   const body = el("div", "db-body");
   if (db.history.length) {
+    const snip = el("div", "snip");
+    const sizes = [...db.history].reverse(); // قدیمی -> جدید
+    const max = Math.max(...sizes.map((x) => x.size), 1);
+    const spark = el("div", "spark");
+    spark.title = "روند حجم ۱۴ بکاپ Full آخر";
+    sizes.forEach((x) => {
+      const i = el("i");
+      i.style.height = Math.max(8, (x.size / max) * 100) + "%";
+      i.title = `${fmtDate(x.t)} • ${fmtSize(x.size)}`;
+      spark.append(i);
+    });
+    snip.append(spark);
     const t = el("table");
     const head = el("tr");
     ["تاریخ بکاپ Full", "حجم"].forEach((x) => head.append(el("th", null, x)));
@@ -51,7 +62,8 @@ function dbRow(server, db) {
       r.append(el("td", null, fmtDate(x.t)), el("td", null, fmtSize(x.size)));
       t.append(r);
     });
-    body.append(t);
+    snip.append(t);
+    body.append(snip);
   } else {
     body.append(el("p", "muted", "بکاپ Full ثبت‌شده‌ای وجود ندارد."));
   }
@@ -72,6 +84,7 @@ function dbRow(server, db) {
 
 function serverBox(s, rows) {
   const d = el("details", "server " + s.status);
+  d.dataset.server = s.name;
   track(d, openServers, s.name);
 
   const sum = el("summary", "srv-sum");
@@ -121,6 +134,33 @@ function serverBox(s, rows) {
   return d;
 }
 
+function renderWall() {
+  const box = $("wallBox"), wall = $("wall");
+  wall.replaceChildren();
+  const order = { error: 0, warning: 1, ok: 2 };
+  const list = [...data.servers].sort((a, b) => order[a.status] - order[b.status]);
+  box.hidden = !list.length;
+  list.forEach((s) => {
+    const grp = el("div", "grp");
+    const items = s.dbs.length ? s.dbs : [{ name: s.msg || s.name, status: s.status }];
+    items.forEach((x) => {
+      const led = el("button", "led " + x.status);
+      led.type = "button";
+      led.title = `${s.name}${s.dbs.length ? " / " + x.name : ""} — ${LABEL[x.status]}`;
+      led.setAttribute("aria-label", led.title);
+      led.onclick = () => {
+        filter = "all"; query = ""; $("search").value = "";
+        openServers.add(s.name);
+        render();
+        const target = [...document.querySelectorAll(".server")].find((e) => e.dataset.server === s.name);
+        if (target) target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+      };
+      grp.append(led);
+    });
+    wall.append(grp);
+  });
+}
+
 function render() {
   if (!data) return;
   forceOpen = filter !== "all" || query !== "";
@@ -132,31 +172,33 @@ function render() {
   // خلاصه‌ی وضعیت
   const v = $("verdict");
   if (!data.servers.length) {
-    v.className = "verdict";
+    v.className = "hero";
+    $("vBadge").textContent = "بدون سرور";
     $("vText").textContent = "هنوز سروری تعریف نشده است";
     $("vSub").replaceChildren(el("a", null, "از صفحه‌ی تنظیمات یک سرور اضافه کنید", { href: "/settings" }));
   } else {
-    v.className = "verdict " + (count.error ? "error" : count.warning ? "warning" : "ok");
+    v.className = "hero " + (count.error ? "error" : count.warning ? "warning" : "ok");
     $("vText").textContent = count.error
       ? `${fa(count.error)} مورد نیاز به بررسی دارد`
       : count.warning ? `بکاپ‌ها ثبت شده‌اند، ${fa(count.warning)} هشدار وجود دارد`
       : `همه‌ی ${fa(count.all)} بکاپ سالم است`;
-    $("vSub").textContent = data.scanned_at
-      ? `${fa(data.servers.length)} سرور · آخرین اسکن ${fmtDate(data.scanned_at)} (${fa(data.duration)} ثانیه)`
-      : "هنوز اسکنی انجام نشده است";
+    $("vBadge").textContent = data.scanned_at ? `آخرین اسکن ${fmtDate(data.scanned_at)}` : "منتظر اولین اسکن";
+    $("vSub").textContent = `${fa(data.servers.length)} سرور • ${fa(count.all)} بکاپ تحت پایش` + (data.duration != null ? ` • مدت اسکن ${fa(data.duration)} ثانیه` : "");
   }
 
   const f = $("filters");
   f.replaceChildren();
   SEG.forEach(([k, name]) => {
-    const b = el("button");
+    const b = el("button", "tile " + k);
     b.type = "button";
     b.setAttribute("aria-pressed", String(filter === k));
-    if (k !== "all") { const i = el("i"); i.style.background = DOTS[k]; b.append(i); }
-    b.append(name + " ", el("b", null, fa(count[k])));
+    b.append(el("span", "tile-label", name), el("b", "tile-num" + (count[k] ? " has" : ""), fa(count[k])));
+    b.firstChild.prepend(el("i"));
     b.onclick = () => { filter = k; render(); };
     f.append(b);
   });
+
+  renderWall();
 
   const main = $("content");
   main.replaceChildren();
