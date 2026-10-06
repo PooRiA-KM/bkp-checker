@@ -7,17 +7,34 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <header class="top">
-    <div>
-      <h1>پایش بکاپ سرورها</h1>
-      <p id="scanInfo" class="muted">در حال بارگذاری…</p>
+  <div class="topbar"><div class="wrap">
+    <span class="brand">پایش بکاپ</span>
+    <nav class="nav">
+      <a href="/" aria-current="page">وضعیت</a>
+      <a href="/settings">تنظیمات</a>
+    </nav>
+  </div></div>
+
+  <div class="wrap">
+    <section class="verdict" id="verdict">
+      <div class="v-main"><span class="dot"></span><h1 id="vText">در حال بارگذاری…</h1></div>
+      <p class="muted" id="vSub"></p>
+    </section>
+
+    <div class="toolbar">
+      <div class="seg" id="filters" role="group" aria-label="فیلتر وضعیت"></div>
+      <input type="search" id="search" placeholder="جستجوی سرور یا دیتابیس…" aria-label="جستجو">
+      <div class="tools">
+        <button type="button" class="ghost" id="expandAll">باز کردن همه</button>
+        <button type="button" class="ghost" id="collapseAll">بستن همه</button>
+        <button type="button" id="refreshBtn">اسکن دوباره</button>
+      </div>
     </div>
-    <button id="refreshBtn" type="button">اسکن دوباره</button>
-  </header>
 
-  <nav class="filters" id="filters" aria-label="فیلتر وضعیت"></nav>
-  <main id="content"></main>
+    <main id="content"></main>
+  </div>
 
+  <script src="/static/common.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

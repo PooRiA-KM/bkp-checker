@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تنظیمات پایش بکاپ</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="topbar"><div class="wrap">
+    <span class="brand">پایش بکاپ</span>
+    <nav class="nav">
+      <a href="/">وضعیت</a>
+      <a href="/settings" aria-current="page">تنظیمات</a>
+    </nav>
+  </div></div>
+
+  <div class="wrap settings">
+    <h1 class="page-title">تنظیمات</h1>
+
+    <section class="panel">
+      <h2>تنظیمات عمومی</h2>
+      <p class="muted">مقدارهای پیش‌فرض برای همه‌ی سرورها؛ هر سرور می‌تواند آن‌ها را override کند.</p>
+      <div class="grid" id="general"></div>
+      <details class="adv">
+        <summary>پیشرفته (آدرس و پورت پنل)</summary>
+        <div class="grid" id="advanced"></div>
+        <p class="hint">تغییر آدرس یا پورت بعد از راه‌اندازی مجدد برنامه اعمال می‌شود. برای قفل کردن پنل با نام کاربری و رمز، بخش <code dir="ltr">"auth": {"username": "...", "password": "..."}</code> را در config.json اضافه کنید.</p>
+      </details>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>سرورها</h2>
+        <button type="button" id="addServer">افزودن سرور</button>
+      </div>
+      <div id="servers"></div>
+    </section>
+  </div>
+
+  <div class="savebar"><div class="wrap">
+    <span id="saveState" class="muted">بدون تغییر</span>
+    <div class="tools">
+      <pre id="errors" class="errors" hidden></pre>
+      <button type="button" id="saveBtn">ذخیره تنظیمات</button>
+    </div>
+  </div></div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/settings.js"></script>
+</body>
+</html>

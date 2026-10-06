@@ -1,35 +1,18 @@
 const LABEL = { ok: "سالم", warning: "هشدار", error: "مشکل" };
+const SEG = [["all", "همه"], ["error", "مشکل"], ["warning", "هشدار"], ["ok", "سالم"]];
+const DOTS = { error: "var(--err)", warning: "#e0a21a", ok: "var(--ok)" };
+
 let data = null;
 let filter = "all";
-
-const $ = (id) => document.getElementById(id);
-function el(tag, cls, text) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-}
-
-const fa = (n) => Number(n).toLocaleString("fa-IR");
-const fmtDate = (t) => new Date(t * 1000).toLocaleString("fa-IR-u-ca-persian", { dateStyle: "short", timeStyle: "short" });
-function fmtSize(b) {
-  if (b == null) return "—";
-  const u = ["بایت", "کیلوبایت", "مگابایت", "گیگابایت", "ترابایت"];
-  let i = 0;
-  while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
-  return fa(b.toFixed(i > 1 ? 1 : 0)) + " " + u[i];
-}
-function fmtAge(h) {
-  if (h == null) return "";
-  if (h < 1) return "کمتر از یک ساعت پیش";
-  if (h < 48) return fa(Math.floor(h)) + " ساعت پیش";
-  return fa(Math.floor(h / 24)) + " روز پیش";
-}
+let query = "";
+let forceOpen = false;
+const openServers = new Set();
+const openDbs = new Set();
 
 function backupCell(label, b, extra) {
   const c = el("div", "cell");
   c.dataset.label = label;
-  if (!b) { c.append(el("span", "muted", "غیرفعال")); return c; }
+  if (!b) { c.append(el("span", "muted", "ندارد")); return c; }
   if (b.t == null) { c.append(el("span", "bad", b.msg)); return c; }
   c.append(el("span", null, fmtDate(b.t)));
   c.append(el("small", null, `${fmtAge(b.age_h)} · ${fmtSize(b.size)}${extra || ""}`));
@@ -37,48 +20,140 @@ function backupCell(label, b, extra) {
   return c;
 }
 
-function dbRow(db) {
+function track(details, set, key) {
+  if (forceOpen || set.has(key)) details.open = true;
+  details.addEventListener("toggle", () => {
+    if (forceOpen) return;
+    details.open ? set.add(key) : set.delete(key);
+  });
+}
+
+function dbRow(server, db) {
   const d = el("details", "db");
+  track(d, openDbs, server.name + "/" + db.name);
+
   const s = el("summary", "row");
   s.append(el("div", "dbname", db.name));
   s.append(backupCell("Full", db.full));
-  s.append(backupCell("Diff", db.diff, db.diff && db.diff.count_24h != null ? ` · ${fa(db.diff.count_24h)} فایل در ۲۴ ساعت` : ""));
+  const cnt = db.diff && db.diff.count_24h != null ? ` · ${fa(db.diff.count_24h)} فایل در ۲۴ ساعت` : "";
+  s.append(backupCell("Diff", db.diff, cnt));
   s.append(el("span", "chip " + db.status, LABEL[db.status]));
   d.append(s);
 
-  const h = el("div", "hist");
-  const t = el("table");
-  const head = el("tr");
-  ["تاریخ Full", "حجم"].forEach((x) => head.append(el("th", null, x)));
-  t.append(head);
-  db.history.forEach((x) => {
-    const r = el("tr");
-    r.append(el("td", null, fmtDate(x.t)), el("td", null, fmtSize(x.size)));
-    t.append(r);
-  });
-  h.append(t);
-  d.append(h);
+  const body = el("div", "db-body");
+  if (db.history.length) {
+    const t = el("table");
+    const head = el("tr");
+    ["تاریخ بکاپ Full", "حجم"].forEach((x) => head.append(el("th", null, x)));
+    t.append(head);
+    db.history.forEach((x) => {
+      const r = el("tr");
+      r.append(el("td", null, fmtDate(x.t)), el("td", null, fmtSize(x.size)));
+      t.append(r);
+    });
+    body.append(t);
+  } else {
+    body.append(el("p", "muted", "بکاپ Full ثبت‌شده‌ای وجود ندارد."));
+  }
+  if (db.folder) {
+    const b = el("button", "link", "نادیده گرفتن این پوشه در پایش");
+    b.type = "button";
+    b.onclick = async () => {
+      if (!confirm(`پوشه «${db.name}» از پایش سرور «${server.name}» حذف شود؟\nاز صفحه‌ی تنظیمات می‌توانید برگردانید.`)) return;
+      b.disabled = true;
+      try { data = await api("/api/exclude", "POST", { server: server.name, name: db.name }); render(); toast("پوشه نادیده گرفته شد"); }
+      catch (e) { toast(e.message, "err"); b.disabled = false; }
+    };
+    body.append(b);
+  }
+  d.append(body);
+  return d;
+}
+
+function serverBox(s, rows) {
+  const d = el("details", "server " + s.status);
+  track(d, openServers, s.name);
+
+  const sum = el("summary", "srv-sum");
+  const id = el("div", "srv-id");
+  id.append(el("strong", null, s.name), el("span", "path", s.path));
+
+  const info = el("div", "srv-info");
+  const bar = el("div", "bar");
+  if (s.dbs.length) {
+    const c = { ok: 0, warning: 0, error: 0 };
+    s.dbs.forEach((x) => c[x.status]++);
+    const pills = el("div", "pills");
+    pills.append(el("span", "pill total", `${fa(s.dbs.length)} دیتابیس`));
+    ["error", "warning", "ok"].forEach((k) => {
+      if (c[k]) pills.append(el("span", "pill " + k, `${fa(c[k])} ${LABEL[k]}`));
+    });
+    info.append(pills);
+    const bad = s.dbs.filter((x) => x.status !== "ok").map((x) => x.name);
+    if (bad.length) {
+      const shown = bad.slice(0, 3).join("، ");
+      info.append(el("div", "names", bad.length > 3 ? `${shown} و ${fa(bad.length - 3)} مورد دیگر` : shown));
+    }
+    ["error", "warning", "ok"].forEach((k) => {
+      if (!c[k]) return;
+      const seg = el("span", k);
+      seg.style.width = (c[k] / s.dbs.length) * 100 + "%";
+      bar.append(seg);
+    });
+    bar.title = `${c.ok} سالم، ${c.warning} هشدار، ${c.error} مشکل`;
+  } else {
+    info.append(el("span", "pill error", s.msg));
+  }
+  sum.append(el("span", "chev"), id, info, bar, el("span", "chip " + s.status, LABEL[s.status]));
+  d.append(sum);
+
+  if (!s.dbs.length) {
+    d.append(el("div", "srv-msg", s.msg));
+    return d;
+  }
+  const cols = el("div", "cols");
+  ["دیتابیس", "آخرین Full", "آخرین Diff", "وضعیت"].forEach((x) => cols.append(el("div", null, x)));
+  d.append(cols);
+  rows.forEach((db) => d.append(dbRow(s, db)));
+  if (s.excluded && s.excluded.length) {
+    d.append(el("div", "srv-foot", `${fa(s.excluded.length)} پوشه نادیده گرفته شد: ${s.excluded.join("، ")}`));
+  }
   return d;
 }
 
 function render() {
   if (!data) return;
-  const dbs = data.servers.flatMap((s) => s.dbs);
-  const count = { all: dbs.length, ok: 0, warning: 0, error: 0 };
-  dbs.forEach((d) => count[d.status]++);
-  data.servers.filter((s) => !s.dbs.length && s.status === "error").forEach(() => count.error++);
+  forceOpen = filter !== "all" || query !== "";
 
-  $("scanInfo").textContent = data.scanned_at
-    ? `آخرین اسکن: ${fmtDate(data.scanned_at)} (${fa(data.duration)} ثانیه)`
-    : "هنوز اسکنی انجام نشده است";
+  const items = data.servers.flatMap((s) => (s.dbs.length ? s.dbs : [{ status: s.status }]));
+  const count = { all: items.length, ok: 0, warning: 0, error: 0 };
+  items.forEach((i) => count[i.status]++);
+
+  // خلاصه‌ی وضعیت
+  const v = $("verdict");
+  if (!data.servers.length) {
+    v.className = "verdict";
+    $("vText").textContent = "هنوز سروری تعریف نشده است";
+    $("vSub").replaceChildren(el("a", null, "از صفحه‌ی تنظیمات یک سرور اضافه کنید", { href: "/settings" }));
+  } else {
+    v.className = "verdict " + (count.error ? "error" : count.warning ? "warning" : "ok");
+    $("vText").textContent = count.error
+      ? `${fa(count.error)} مورد نیاز به بررسی دارد`
+      : count.warning ? `بکاپ‌ها ثبت شده‌اند، ${fa(count.warning)} هشدار وجود دارد`
+      : `همه‌ی ${fa(count.all)} بکاپ سالم است`;
+    $("vSub").textContent = data.scanned_at
+      ? `${fa(data.servers.length)} سرور · آخرین اسکن ${fmtDate(data.scanned_at)} (${fa(data.duration)} ثانیه)`
+      : "هنوز اسکنی انجام نشده است";
+  }
 
   const f = $("filters");
   f.replaceChildren();
-  [["all", "همه"], ["error", "مشکل‌دار"], ["warning", "هشدار"], ["ok", "سالم"]].forEach(([k, name]) => {
-    const b = el("button", null, name);
+  SEG.forEach(([k, name]) => {
+    const b = el("button");
     b.type = "button";
     b.setAttribute("aria-pressed", String(filter === k));
-    b.append(el("b", null, fa(count[k])));
+    if (k !== "all") { const i = el("i"); i.style.background = DOTS[k]; b.append(i); }
+    b.append(name + " ", el("b", null, fa(count[k])));
     b.onclick = () => { filter = k; render(); };
     f.append(b);
   });
@@ -86,48 +161,36 @@ function render() {
   const main = $("content");
   main.replaceChildren();
   const order = { error: 0, warning: 1, ok: 2 };
-  const servers = [...data.servers].sort((a, b) => order[a.status] - order[b.status]);
+  const q = query.trim().toLowerCase();
 
-  servers.forEach((s) => {
-    const rows = s.dbs.filter((d) => filter === "all" || d.status === filter);
-    const show = s.dbs.length ? rows.length : (filter === "all" || filter === s.status);
-    if (!show) return;
-
-    const box = el("section", "server " + s.status);
-    const head = el("header");
-    const left = el("div");
-    left.append(el("h2", null, s.name), el("div", "path", s.path));
-    head.append(left, el("span", "chip " + s.status, LABEL[s.status]));
-    box.append(head);
-
-    if (!s.dbs.length) {
-      box.append(el("div", "srv-msg", s.msg));
-    } else {
-      const cols = el("div", "cols");
-      ["دیتابیس", "آخرین Full", "آخرین Diff", "وضعیت"].forEach((x) => cols.append(el("div", null, x)));
-      box.append(cols);
-      rows.forEach((d) => box.append(dbRow(d)));
-    }
-    main.append(box);
+  [...data.servers].sort((a, b) => order[a.status] - order[b.status]).forEach((s) => {
+    const nameHit = !q || s.name.toLowerCase().includes(q);
+    const rows = s.dbs.filter((d) => (filter === "all" || d.status === filter) && (nameHit || d.name.toLowerCase().includes(q)));
+    const show = s.dbs.length
+      ? rows.length > 0
+      : (filter === "all" || filter === s.status) && nameHit;
+    if (show) main.append(serverBox(s, rows));
   });
-
-  if (!main.children.length) main.append(el("div", "empty", "موردی برای نمایش وجود ندارد."));
+  if (!main.children.length && data.servers.length) main.append(el("div", "empty", "موردی برای نمایش وجود ندارد."));
 }
 
 async function load(refresh) {
   const btn = $("refreshBtn");
   if (refresh) { btn.disabled = true; btn.textContent = "در حال اسکن…"; }
   try {
-    const r = await (refresh ? fetch("/api/refresh", { method: "POST" }) : fetch("/api/status"));
-    data = await r.json();
-    render();
+    const next = await api(refresh ? "/api/refresh" : "/api/status", refresh ? "POST" : "GET");
+    // اگر اسکن جدیدی نیامده، صفحه را دوباره نمی‌سازیم تا حالت باز/بسته‌ی کشوها حفظ شود
+    if (refresh || !data || next.scanned_at !== data.scanned_at) { data = next; render(); }
   } catch (e) {
-    $("scanInfo").textContent = "ارتباط با سرور برقرار نشد";
+    $("vSub").textContent = "ارتباط با سرور برقرار نشد";
   } finally {
     btn.disabled = false; btn.textContent = "اسکن دوباره";
   }
 }
 
 $("refreshBtn").onclick = () => load(true);
+$("search").oninput = (e) => { query = e.target.value; render(); };
+$("expandAll").onclick = () => { data.servers.forEach((s) => openServers.add(s.name)); render(); };
+$("collapseAll").onclick = () => { openServers.clear(); openDbs.clear(); filter = "all"; $("search").value = ""; query = ""; render(); };
 load(false);
 setInterval(() => load(false), 60000);
