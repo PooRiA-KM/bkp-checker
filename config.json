@@ -1,0 +1,21 @@
+{
+  "host": "127.0.0.1",
+  "port": 9191,
+  "scan_interval_minutes": 15,
+
+  "defaults": {
+    "full_dir": "FULLBK",
+    "diff_dir": "DIFFBK",
+    "extensions": [".bak"],
+    "full_max_age_hours": 26,
+    "diff_max_age_hours": 3,
+    "size_drop_warning_percent": 50
+  },
+
+  "servers": [
+    { "name": "SQL-01", "path": "\\\\sql01\\backup" },
+    { "name": "SQL-02", "path": "\\\\sql02\\backup", "diff_max_age_hours": 6 },
+    { "name": "SQL-03 (فقط Full)", "path": "D:\\Backups\\sql03", "diff_dir": null, "ignore_dbs": ["tempdb_old"] }
+  ]
+}
+
