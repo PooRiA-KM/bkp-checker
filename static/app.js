@@ -27,6 +27,41 @@ function track(details, set, key) {
   });
 }
 
+// جدول تاریخچه + نمودار میله‌ای حجم (برای Full و Diff)
+function historyBlock(kind, all, emptyMsg) {
+  const list = all.slice(0, 6); // فقط ۶ مورد آخر
+  const snip = el("div", "snip");
+  snip.append(el("div", "snip-title", `تاریخچه‌ی ${kind}` + (list.length ? ` — ${fa(list.length)} مورد آخر` : "")));
+  if (!list.length) { snip.append(el("p", "muted", emptyMsg)); return snip; }
+
+  const sizes = [...list].reverse(); // قدیمی -> جدید
+  const max = Math.max(...sizes.map((x) => x.size), 1);
+  const spark = el("div", "spark");
+  spark.title = `روند حجم بکاپ‌های ${kind}`;
+  sizes.forEach((x) => {
+    const i = el("i");
+    i.style.height = Math.max(8, (x.size / max) * 100) + "%";
+    i.title = `${fmtDate(x.t)} • ${fmtSize(x.size)}`;
+    spark.append(i);
+  });
+  snip.append(spark);
+
+  const wrap = el("div", "tbl");
+  const t = el("table");
+  const thead = el("thead"), head = el("tr"), tbody = el("tbody");
+  [`تاریخ بکاپ ${kind}`, "حجم"].forEach((x) => head.append(el("th", null, x)));
+  thead.append(head);
+  list.forEach((x) => {
+    const r = el("tr");
+    r.append(el("td", null, fmtDate(x.t)), el("td", null, fmtSize(x.size)));
+    tbody.append(r);
+  });
+  t.append(thead, tbody);
+  wrap.append(t);
+  snip.append(wrap);
+  return snip;
+}
+
 function dbRow(server, db) {
   const d = el("details", "db");
   track(d, openDbs, server.name + "/" + db.name);
@@ -40,33 +75,10 @@ function dbRow(server, db) {
   d.append(s);
 
   const body = el("div", "db-body");
-  if (db.history.length) {
-    const snip = el("div", "snip");
-    const sizes = [...db.history].reverse(); // قدیمی -> جدید
-    const max = Math.max(...sizes.map((x) => x.size), 1);
-    const spark = el("div", "spark");
-    spark.title = "روند حجم ۱۴ بکاپ Full آخر";
-    sizes.forEach((x) => {
-      const i = el("i");
-      i.style.height = Math.max(8, (x.size / max) * 100) + "%";
-      i.title = `${fmtDate(x.t)} • ${fmtSize(x.size)}`;
-      spark.append(i);
-    });
-    snip.append(spark);
-    const t = el("table");
-    const head = el("tr");
-    ["تاریخ بکاپ Full", "حجم"].forEach((x) => head.append(el("th", null, x)));
-    t.append(head);
-    db.history.forEach((x) => {
-      const r = el("tr");
-      r.append(el("td", null, fmtDate(x.t)), el("td", null, fmtSize(x.size)));
-      t.append(r);
-    });
-    snip.append(t);
-    body.append(snip);
-  } else {
-    body.append(el("p", "muted", "بکاپ Full ثبت‌شده‌ای وجود ندارد."));
-  }
+  const grid = el("div", "hist-grid");
+  grid.append(historyBlock("Full", db.history, "بکاپ Full ثبت‌شده‌ای وجود ندارد."));
+  if (db.diff) grid.append(historyBlock("Diff", db.diff_history || [], "بکاپ Diff ثبت‌شده‌ای وجود ندارد."));
+  body.append(grid);
   if (db.folder) {
     const b = el("button", "link", "نادیده گرفتن این پوشه در پایش");
     b.type = "button";

@@ -145,11 +145,16 @@ details[open] > summary > .chev { transform: rotate(-45deg); border-color: var(-
 .cell .bad { color: var(--err); display: block; font-size: 13px; }
 .cell .warn { color: var(--warn); display: block; font-size: 13px; }
 .db-body { padding: .25rem 1.6rem 1.25rem; background: var(--carbon); display: grid; gap: .75rem; justify-items: start; }
-.snip { width: 100%; max-width: 34rem; background: var(--deep); border: 1px solid var(--slate); border-radius: var(--r-small); padding: 1rem; font-family: var(--mono); font-size: 12px; }
+.hist-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: 1rem; width: 100%; align-items: start; }
+.snip { width: 100%; background: var(--deep); border: 1px solid var(--slate); border-radius: var(--r-small); padding: 1rem; font-family: var(--mono); font-size: 12px; }
 .spark { display: flex; align-items: flex-end; gap: 4px; height: 40px; direction: ltr; margin-bottom: .75rem; }
 .spark i { flex: 1; max-width: 12px; min-height: 4px; border-radius: var(--r-pill); background: var(--slate); }
 .spark i:last-child { background: var(--mint); }
+.snip-title { font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--ash); margin-bottom: .75rem; }
+.snip .muted { margin: 0; font-family: var(--font); }
+.tbl { max-height: 17rem; overflow-y: auto; }
 .snip table { border-collapse: collapse; width: 100%; }
+.snip thead th { position: sticky; top: 0; background: var(--deep); }
 .snip th, .snip td { text-align: right; padding: .25rem .4rem; border-bottom: 1px solid var(--slate); font-weight: 400; color: var(--ash); }
 .snip tr:last-child td { border-bottom: 0; }
 .snip th { color: var(--smoke); font-family: var(--font); }

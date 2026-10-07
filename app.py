@@ -33,6 +33,7 @@ DEFAULTS = {
     "size_drop_warning_percent": 50,
     "exclude_dirs": [],
 }
+HISTORY_LIMIT = 6  # تعداد آخرین بکاپ‌هایی که در جدول هر دیتابیس نشان داده می‌شود
 RANK = {"ok": 0, "warning": 1, "error": 2}
 state = {"servers": [], "scanned_at": None, "duration": None}
 state_lock = threading.Lock()
@@ -246,7 +247,7 @@ def scan_server(srv, defaults, now):
     for db in names:
         f_files = full.get(db, [])
         f = check(f_files, cfg["full_max_age_hours"], now, "Full", cfg["size_drop_warning_percent"])
-        d = None
+        d, d_files = None, []
         if use_diff:
             if diff_missing:
                 d = {"status": "error", "msg": f"پوشه {cfg['diff_dir']} پیدا نشد", "t": None, "size": None, "age_h": None}
@@ -260,7 +261,8 @@ def scan_server(srv, defaults, now):
             "status": worst([f["status"]] + ([d["status"]] if d else [])),
             "full": f,
             "diff": d,
-            "history": [{"t": x["t"], "size": x["size"]} for x in f_files[:14]],
+            "history": [{"t": x["t"], "size": x["size"]} for x in f_files[:HISTORY_LIMIT]],
+            "diff_history": [{"t": x["t"], "size": x["size"]} for x in d_files[:HISTORY_LIMIT]],
         })
 
     if not out["dbs"]:
