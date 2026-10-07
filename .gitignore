@@ -221,3 +221,13 @@ __marimo__/
 
 /.idea
 config.json
+*.tmp
+
+*.pyc
+.venv/
+
+
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
