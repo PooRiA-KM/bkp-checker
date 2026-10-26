@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>پایش بکاپ سرورها</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar"><div class="wrap"><div class="navbar">
+    <a class="brand" href="/"><span class="logo"></span>پایش بکاپ</a>
+    <nav class="nav">
+      <a href="/" aria-current="page">وضعیت</a>
+      <a href="/settings">تنظیمات</a>
+      <a href="/logout" class="nav-logout" data-auth-only hidden>خروج</a>
+    </nav>
+  </div></div></header>
+
+  <div class="wrap">
+    <section class="hero" id="verdict">
+      <span class="badge"><span class="live"></span><span id="vBadge">در حال اتصال…</span></span>
+      <h1 id="vText">در حال بارگذاری…</h1>
+      <p class="muted" id="vSub"></p>
+    </section>
+
+    <div class="tiles" id="filters" role="group" aria-label="فیلتر وضعیت"></div>
+
+    <section class="wall" id="wallBox" hidden>
+      <div class="wall-head">
+        <h2>نقشه‌ی سلامت — هر نقطه یک دیتابیس</h2>
+        <div class="legend">
+          <span><i class="ok"></i>سالم</span><span><i class="warning"></i>هشدار</span><span><i class="error"></i>مشکل</span>
+        </div>
+      </div>
+      <div class="leds" id="wall"></div>
+    </section>
+
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="جستجوی سرور یا دیتابیس…" aria-label="جستجو">
+      <div class="tools">
+        <button type="button" class="ghost" id="expandAll">باز کردن همه</button>
+        <button type="button" class="ghost" id="collapseAll">بستن همه</button>
+        <button type="button" id="refreshBtn">اسکن دوباره</button>
+      </div>
+    </div>
+
+    <main id="content"></main>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

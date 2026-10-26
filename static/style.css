@@ -52,7 +52,7 @@ button.ghost:hover { background: var(--carbon); border-color: var(--smoke); }
 button.danger { color: var(--err); } button.danger:hover { background: var(--err-bg); }
 button.link { background: none; border: 0; color: var(--mint); padding: 0; font-weight: 500; }
 button.link:hover { background: none; text-decoration: underline; }
-input[type=text], input[type=number], input[type=search], textarea {
+input[type=text], input[type=password], input[type=number], input[type=search], textarea {
   font: inherit; width: 100%; padding: .5rem .85rem; background: var(--deep); color: var(--white);
   border: 1px solid var(--slate); border-radius: var(--r-small); }
 input::placeholder, textarea::placeholder { color: var(--smoke); }
@@ -216,3 +216,68 @@ button.copy:hover { background: #e472f4; border-color: #e472f4; }
   .tools { margin-inline-start: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .live { animation: none; } .chev, .toast, .server, .led { transition: none; } }
+
+/* ===== Login page ===== */
+[hidden] { display: none !important; }
+.login-page { display: grid; place-items: center; min-height: 100vh; padding: 1.5rem; }
+.login-card {
+  width: 100%; max-width: 26rem;
+  background: var(--obsidian); border: 1px solid var(--slate);
+  border-radius: var(--r-card); padding: 2.5rem 2rem 1.5rem;
+  box-shadow: 0 24px 64px -24px rgba(0, 0, 0, .7);
+}
+.brand-mark { display: grid; place-items: center; margin-bottom: 1.25rem; }
+.brand-mark .logo { width: 2.25rem; height: 2.25rem; border-width: 2px; }
+.brand-mark .logo::after { inset: 5px; }
+.login-card h1 { text-align: center; font-size: 1.5rem; font-weight: 700; color: var(--mint); margin: 0 0 .25rem; }
+.login-sub { text-align: center; color: var(--smoke); font-size: 13px; margin: 0 0 2rem; }
+.login-card form { display: grid; gap: 1rem; }
+.login-card .field { display: grid; gap: .35rem; }
+.login-card .field .lbl { font-size: 12px; font-weight: 600; color: var(--ash); }
+.login-card input[type=text], .login-card input[type=password] { font-size: 15px; padding: .7rem .9rem; }
+.login-card button[type=submit] { padding: .75rem 1rem; font-size: 15px; font-weight: 700; margin-top: .35rem; }
+/* ===== Login page ===== */
+.pwd-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.pwd-wrap input {
+  padding-inline-end: 4rem; /* فاصله دادن متن از دکمه */
+  direction: ltr; /* استانداردسازی رمز عبور */
+  text-align: right; /* راست‌چین کردن برای ظاهر فارسی */
+}
+
+.toggle-pwd {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: .5rem; /* در فارسی یعنی سمت چپ */
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--smoke);
+  font-family: var(--font);
+  font-weight: 500;
+  font-size: 13px;
+  padding: .3rem .6rem;
+  border-radius: var(--r-small);
+  cursor: pointer;
+  z-index: 2;
+}
+
+.toggle-pwd:hover {
+  color: var(--mint);
+  background: var(--carbon);
+}
+.login-error {
+  color: var(--err); background: var(--err-bg);
+  border: 1px solid rgba(255,107,107,.3);
+  border-radius: var(--r-small); padding: .55rem .85rem; font-size: 13px;
+}
+.login-foot {
+  text-align: center; color: var(--smoke); font-size: 12px;
+  margin: 1.5rem 0 0; padding-top: 1.25rem; border-top: 1px solid var(--slate);
+}
+.nav a.nav-logout:hover { color: var(--err); }

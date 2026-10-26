@@ -18,7 +18,10 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from flask import Flask, Response, jsonify, request, send_from_directory
+from flask import Flask, Response, jsonify, request, send_from_directory, session, redirect
+import secrets
+from datetime import timedelta
+from urllib.parse import quote
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE, "config.json")
@@ -43,6 +46,43 @@ wake = threading.Event()  # بیدار کردن حلقه‌ی اسکن بعد ا
 
 
 # ---------- تنظیمات ----------
+
+def _load_or_create_secret():
+    path = os.path.join(BASE, ".secret_key")
+    try:
+        with open(path, encoding="ascii") as f:
+            k = f.read().strip()
+        if len(k) >= 32:
+            return k
+    except OSError:
+        pass
+    k = secrets.token_hex(32)
+    try:
+        with open(path, "w", encoding="ascii") as f:
+            f.write(k)
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
+    except OSError:
+        pass
+    return k
+
+
+app.secret_key = _load_or_create_secret()
+app.permanent_session_lifetime = timedelta(days=7)
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
+
+
+def _safe_next(url):
+    """فقط مسیر داخلی مجاز است (جلوگیری از open redirect)."""
+    if not url or not isinstance(url, str):
+        return "/"
+    if not url.startswith("/") or url.startswith("//"):
+        return "/"
+    return url
+
+
 def to_list(v, sep=r"\n"):
     if isinstance(v, str):
         v = re.split(sep, v)
@@ -308,11 +348,52 @@ def guard():
     a = load_config().get("auth") or {}
     if not a.get("username"):
         return None
+    if request.endpoint in ("login", "logout", "static", "api_session"):
+        return None
+    if request.path.startswith("/static/"):
+        return None
+    # نشست فعال
+    if session.get("user") == a["username"]:
+        return None
+    # Basic Auth برای اسکریپت‌ها (بدون پنجره‌ی مرورگر)
     c = request.authorization
     if c and hmac.compare_digest(c.username or "", a["username"]) \
             and hmac.compare_digest(c.password or "", str(a.get("password", ""))):
         return None
-    return Response("Login required", 401, {"WWW-Authenticate": 'Basic realm="Backup Monitor"'})
+    # عدم دسترسی
+    if request.path.startswith("/api/"):
+        return jsonify(error="unauthorized"), 401
+    nxt = request.path
+    if request.query_string:
+        nxt += "?" + request.query_string.decode("utf-8", "ignore")
+    return redirect("/login?next=" + quote(nxt, safe=""))
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    a = load_config().get("auth") or {}
+    if not a.get("username"):
+        return redirect("/")
+    if request.method == "GET":
+        if session.get("user") == a["username"]:
+            return redirect(_safe_next(request.args.get("next", "/")))
+        return send_from_directory(app.static_folder, "login.html")
+    data = request.get_json(silent=True) or request.form or {}
+    username = str(data.get("username") or "").strip()
+    password = str(data.get("password") or "")
+    if hmac.compare_digest(username, a["username"]) \
+            and hmac.compare_digest(password, str(a.get("password", ""))):
+        session.clear()
+        session["user"] = a["username"]
+        session.permanent = True
+        return jsonify(ok=True, next=_safe_next(str(data.get("next") or "/")))
+    return jsonify(error="نام کاربری یا رمز عبور اشتباه است"), 401
+
+@app.route("/logout", methods=["GET", "POST"])
+def logout():
+    session.clear()
+    if request.method == "POST":
+        return jsonify(ok=True)
+    return redirect("/login")
 
 
 # ---------- صفحه‌ها و API ----------
@@ -403,6 +484,13 @@ def api_exclude():
     scan_all()
     with state_lock:
         return jsonify(state)
+
+@app.route("/api/session")
+def api_session():
+    """وضعیت نشست — برای نمایش/پنهان‌کردن لینک خروج در نوار بالا."""
+    a = load_config().get("auth") or {}
+    logged = bool(a.get("username") and session.get("user") == a["username"])
+    return jsonify(auth_required=bool(a.get("username")), logged_in=logged)
 
 
 if __name__ == "__main__":

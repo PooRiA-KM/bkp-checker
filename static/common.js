@@ -33,6 +33,12 @@ async function api(url, method, body) {
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
+  // نشست منقضی شده → برگشت به صفحه‌ی ورود
+  if (r.status === 401 && url !== "/login") {
+    const next = encodeURIComponent(location.pathname + location.search);
+    location.href = "/login?next=" + next;
+    throw new Error("جلسه منقضی شده است");
+  }
   let data = null;
   try { data = await r.json(); } catch (e) { /* پاسخ بدون JSON */ }
   if (!r.ok) throw new Error(data && data.errors ? data.errors.join("\n") : "خطا در ارتباط با سرور");
@@ -48,3 +54,15 @@ function toast(msg, kind) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => (t.className = "toast"), 3500);
 }
+
+// نمایش لینک خروج در navbar فقط زمانی که احراز هویت فعال است
+(async () => {
+  try {
+    const r = await fetch("/api/session");
+    if (!r.ok) return;
+    const s = await r.json();
+    if (s.auth_required && s.logged_in) {
+      document.querySelectorAll("[data-auth-only]").forEach((e) => (e.hidden = false));
+    }
+  } catch (e) { /* بی‌اهمیت */ }
+})();

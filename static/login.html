@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>ورود — پایش بکاپ</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="login-page">
+  <main class="login-card">
+    <div class="brand-mark"><span class="logo"></span></div>
+    <h1>پایش بکاپ</h1>
+    <p class="login-sub">برای ادامه وارد شوید</p>
+    <form id="loginForm" autocomplete="on">
+      <label class="field">
+        <span class="lbl">نام کاربری</span>
+        <input type="text" name="username" id="username" autocomplete="username" required autofocus>
+      </label>
+      <div class="field">
+        <label class="lbl" for="password">رمز عبور</label>
+        <div class="pwd-wrap">
+          <input type="password" name="password" id="password" autocomplete="current-password" required>
+          <button type="button" class="toggle-pwd" id="togglePwd">نمایش</button>
+        </div>
+      </div>
+      <div id="loginError" class="login-error" hidden></div>
+      <button type="submit" id="submitBtn">ورود</button>
+    </form>
+  </main>
+  <script src="/static/login.js"></script>
+</body>
+</html>
